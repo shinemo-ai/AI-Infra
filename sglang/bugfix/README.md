@@ -14,7 +14,7 @@ Copy the template below into a new section (or a dedicated markdown file under t
 
 ## Bugfix
 
-### [Fix inconsistent data types in detokenizer] 
+### [Fix inconsistent data types in detokenizer](https://github.com/shinemo-ai/sglang/tree/fix-detokenize-tensor-bug)
 
 | Field | Details |
 |-------|---------|

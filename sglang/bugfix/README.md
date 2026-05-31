@@ -67,3 +67,21 @@ def detokenize_top_logprobs_tokens(
         ret.append(self.detokenize_logprob_tokens(val, idx, decode_to_text))
     return ret
 ```
+
+### [Fix prefill-decode disaggregation router bug when returning logprobs](https://github.com/shinemo-ai/sglang/tree/fix-pd-router-bug)
+
+| Field | Details |
+|-------|---------|
+| **Status** | `None` |
+| **Severity** |  `high` |
+| **Sgl-model-gateway version** | `v0.3.1` |
+| **Branch** | `fix-pd-router-bug` |
+| **Commits** | `a3d72cb` |
+| **Upstream PR** | `N/A` |
+
+#### Symptoms
+
+In PD disaggregation, if `sgl-maas-gateway` is used, an error will occur when a user requests and passes in `logprob` related parameters. The main reason is that in Rust, the `bytes` type returns `application/octet-stream` by default, causing JSON parsing to fail.
+
+#### Related Changes
+- The issue was fixed in [pd_router](https://github.com/shinemo-ai/sglang/commit/a3d72cb65f0b4685c1f13b9cb46e3bfe78c997c4).

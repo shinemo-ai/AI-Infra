@@ -85,3 +85,46 @@ In PD disaggregation, if `sgl-maas-gateway` is used, an error will occur when a 
 
 #### Related Changes
 - The issue was fixed in [pd_router](https://github.com/shinemo-ai/sglang/commit/a3d72cb65f0b4685c1f13b9cb46e3bfe78c997c4).
+
+### [Fix AttributeError in encode_arguments_to_dsml for DeepSeek-V4](https://github.com/sgl-project/sglang/pull/25658)
+
+This bug fix comes from contributions from the open-source community.
+
+| Field | Details |
+|-------|---------|
+| **Status** | `None` |
+| **Severity** |  `medium` |
+| **SGLang version** | `v0.5.12` |
+| **Branch** | `None` |
+| **Commits** | `None` |
+| **Upstream PR** | `N/A` |
+
+#### Related Changes
+- The issue was fixed in [encode_arguments_to_dsml](https://github.com/sgl-project/sglang/pull/25658):
+```python
+def encode_arguments_to_dsml(tool_call: Dict[str, str]) -> str:
+    """
+    Encode tool call arguments into DSML parameter format.
+
+    Args:
+        tool_call: Dict with "name" and "arguments" (JSON string) keys.
+
+    Returns:
+        DSML-formatted parameter string.
+    """
+    p_dsml_template = '<{dsml_token}parameter name="{key}" string="{is_str}">{value}</{dsml_token}parameter>'
+    P_dsml_strs = []
+
+    try:
+        arguments = json.loads(tool_call["arguments"])
+    except Exception as err:
+        arguments = tool_call["arguments"]
+
+    if not isinstance(arguments, dict):
+        arguments = {
+            "arguments": arguments if isinstance(arguments, str) else to_json(arguments)
+        }
+    
+    for k, v in arguments.items():
+        ...
+```

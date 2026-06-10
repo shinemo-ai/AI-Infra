@@ -8,18 +8,41 @@ Upstream fixes are submitted to the SGLang community when possible. However, com
 
 ## How to Add an Entry
 
-Copy the template below into a new section (or a dedicated markdown file under this directory) for each bugfix.
+Copy the template below into a new section for each bugfix.
+
+```markdown
+## [Short title](link-to-branch-or-pr)
+
+| Field | Details |
+|-------|---------|
+| **Status** | `fixed` / `pending upstream` / `workaround` |
+| **Severity** | `low` / `medium` / `high` |
+| **SGLang version** | `vX.Y.Z` |
+| **Branch** | `branch-name` |
+| **Commits** | `abc1234` |
+| **Upstream PR** | `N/A` or PR link |
+
+#### Symptoms
+
+Describe what users or operators observe in production.
+
+#### Root Cause
+
+Explain why the bug happens.
+
+#### Related Changes
+
+Link to the fix and summarize the key code change.
+```
 
 ---
 
-## Bugfix
-
-### [Fix inconsistent data types in detokenizer](https://github.com/shinemo-ai/sglang/tree/fix-detokenize-tensor-bug)
+## [Fix inconsistent data types in detokenizer](https://github.com/shinemo-ai/sglang/tree/fix-detokenize-tensor-bug)
 
 | Field | Details |
 |-------|---------|
 | **Status** | `None` |
-| **Severity** |  `medium` |
+| **Severity** | `medium` |
 | **SGLang version** | `v0.5.12` |
 | **Branch** | `fix-detokenize-tensor-bug` |
 | **Commits** | `323e8cd` |
@@ -41,7 +64,9 @@ RuntimeError: Boolean value of Tensor with more than one value is ambiguous
 ```
 
 #### Related Changes
-- The issue was fixed in [detokenize_top_logprobs_tokens](https://github.com/shinemo-ai/sglang/blob/fix-detokenize-tensor-bug/python/sglang/srt/managers/tokenizer_manager.py#L2134), using a very robust approach：
+
+Fixed in [detokenize_top_logprobs_tokens](https://github.com/shinemo-ai/sglang/blob/fix-detokenize-tensor-bug/python/sglang/srt/managers/tokenizer_manager.py#L2134):
+
 ```python
 def detokenize_top_logprobs_tokens(
     self,
@@ -68,12 +93,14 @@ def detokenize_top_logprobs_tokens(
     return ret
 ```
 
-### [Fix prefill-decode disaggregation router bug when returning logprobs](https://github.com/shinemo-ai/sglang/tree/fix-pd-router-bug)
+---
+
+## [Fix prefill-decode disaggregation router bug when returning logprobs](https://github.com/shinemo-ai/sglang/tree/fix-pd-router-bug)
 
 | Field | Details |
 |-------|---------|
 | **Status** | `None` |
-| **Severity** |  `high` |
+| **Severity** | `high` |
 | **Sgl-model-gateway version** | `v0.3.1` |
 | **Branch** | `fix-pd-router-bug` |
 | **Commits** | `a3d72cb` |
@@ -84,23 +111,28 @@ def detokenize_top_logprobs_tokens(
 In PD disaggregation, if `sgl-maas-gateway` is used, an error will occur when a user requests and passes in `logprob` related parameters. The main reason is that in Rust, the `bytes` type returns `application/octet-stream` by default, causing JSON parsing to fail.
 
 #### Related Changes
-- The issue was fixed in [pd_router](https://github.com/shinemo-ai/sglang/commit/a3d72cb65f0b4685c1f13b9cb46e3bfe78c997c4).
 
-### [Fix AttributeError in encode_arguments_to_dsml for DeepSeek-V4](https://github.com/sgl-project/sglang/pull/25658)
+Fixed in [pd_router](https://github.com/shinemo-ai/sglang/commit/a3d72cb65f0b4685c1f13b9cb46e3bfe78c997c4).
+
+---
+
+## [Fix AttributeError in encode_arguments_to_dsml for DeepSeek-V4](https://github.com/sgl-project/sglang/pull/25658)
 
 This bug fix comes from contributions from the open-source community.
 
 | Field | Details |
 |-------|---------|
 | **Status** | `None` |
-| **Severity** |  `medium` |
+| **Severity** | `medium` |
 | **SGLang version** | `v0.5.12` |
 | **Branch** | `None` |
 | **Commits** | `None` |
 | **Upstream PR** | `N/A` |
 
 #### Related Changes
-- The issue was fixed in [encode_arguments_to_dsml](https://github.com/sgl-project/sglang/pull/25658):
+
+Fixed in [encode_arguments_to_dsml](https://github.com/sgl-project/sglang/pull/25658):
+
 ```python
 def encode_arguments_to_dsml(tool_call: Dict[str, str]) -> str:
     """
@@ -124,7 +156,34 @@ def encode_arguments_to_dsml(tool_call: Dict[str, str]) -> str:
         arguments = {
             "arguments": arguments if isinstance(arguments, str) else to_json(arguments)
         }
-    
+
     for k, v in arguments.items():
         ...
 ```
+
+---
+
+## [Fix a bug in xgrammar in thinking mode](https://github.com/shinemo-ai/sglang/commit/0590737450afd8ef0577ed1a7c232cb116208a70)
+
+| Field | Details |
+|-------|---------|
+| **Status** | `None` |
+| **Severity** | `high` |
+| **SGLang version** | `v0.5.12` |
+| **Branch** | `fix-reason-grammar` |
+| **Commits** | `0590737` |
+| **Upstream PR** | `N/A` |
+
+#### Symptoms
+
+When `--reasoning-parser` is enabled and a request uses both thinking (`chat_template_kwargs.thinking=true` / `require_reasoning=true`) and structured output (`response_format: json_object` or `json_schema`):
+
+1. **JSON constraint runs too early** — The inner xgrammar JSON schema is applied from the first generated token, instead of only after `</think>` (the thinking phase). The model is steered to emit a complete JSON object immediately after the thinking prefix in the prompt.
+
+2. **No separate content in the API response** — The full completion (often a single JSON blob) lands in `reasoning_content`; `message.content` is null or empty.
+
+3. **Generation may stop after one JSON object** — Once xgrammar accepts a complete JSON object, constrained decoding can terminate; there is no second phase that produces a separate content field.
+
+#### Related Changes
+
+Fixed in [ReasonerGrammarObject(maybe_init_reasoning)](https://github.com/shinemo-ai/sglang/blob/0590737450afd8ef0577ed1a7c232cb116208a70/python/sglang/srt/constrained/reasoner_grammar_backend.py#L81).

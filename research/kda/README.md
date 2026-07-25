@@ -219,4 +219,4 @@ $$
 g_t = -\exp(A_{\log}) \cdot \mathrm{softplus}(s_t + b_{bias})
 $$
 
-其中，softplus(x) $=\ln(1+e^{x})$
+其中，softplus(x) $=\ln(1+e^{x})$ 。 然后调用`tl.cumsum`对 $g_t$ 做累加得到 $G_t$ ，因为在`chunk_kda_fwd_kernel_intra_token_parallel`需要使用 $G_t$ 来计算 $e^{G_t}$ 。

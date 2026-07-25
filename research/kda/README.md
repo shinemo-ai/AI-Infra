@@ -186,7 +186,7 @@ def chunk_kda(
     )
     return o
 ```
-核心是`chunk_kda_fwd`，先看衰减门控 $\g$ 的实现分两种情况：
+核心是`chunk_kda_fwd`，先看衰减门控 $g$ 的实现分两种情况：
 ```python
 if A_log is not None:
     # Fused: gate activation + chunk-local cumsum in one kernel.
@@ -209,4 +209,8 @@ else:
         chunk_indices=chunk_indices,
     )
 ```
-`if A_log is not None`是Kimi默认路径，`kda_gate_chunk_cumsum`其实就是一次kernel做完两件事情，因为这种情况下`chunk_kda_fwd`传入的 $\g$ 其实就是 $ W_{\alpha}^{\uparrow} W_{\alpha}^{\downarrow} x_t $
+`if A_log is not None`是Kimi默认路径，`kda_gate_chunk_cumsum`其实就是一次kernel做完两件事情，因为这种情况下`chunk_kda_fwd`传入的 $g$ 其实就是
+
+$$
+W_{\alpha}^{\uparrow} W_{\alpha}^{\downarrow} x_t
+$$

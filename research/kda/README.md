@@ -209,4 +209,14 @@ else:
         chunk_indices=chunk_indices,
     )
 ```
-`if A_log is not None`是Kimi默认路径，`kda_gate_chunk_cumsum`其实就是一次kernel做完两件事情，因为这种情况下`chunk_kda_fwd`传入的 $g$ 其实就是 $W_{\alpha}^{\uparrow} W_{\alpha}^{\downarrow} x_t$
+`if A_log is not None`是Kimi默认路径，`kda_gate_chunk_cumsum`其实就是一次kernel做完两件事情，因为这种情况下`chunk_kda_fwd`传入的 $g$ 其实就是 $W_{\alpha}^{\uparrow} W_{\alpha}^{\downarrow} x_t$ 。`kda_gate_chunk_cumsum`底层核心调用的是`kda_gate_chunk_cumsum_vector_kernel`这个triton kernel，其实主要做了以下运算：
+
+$$
+s_t = W_{\alpha}^{\uparrow} W_{\alpha}^{\downarrow} x_t
+$$
+
+$$
+g_t = -\exp(A_{\log}) \cdot \mathrm{softplus}(s_t + dt\_bias)
+$$
+
+其中，$\mathrm{softplus}(x) = \ln(1 + e^{x})$

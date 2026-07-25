@@ -216,7 +216,7 @@ s_t = W_{\alpha}^{\uparrow} W_{\alpha}^{\downarrow} x_t
 $$
 
 $$
-g_t = -\exp(A_{\log}) \cdot \mathrm{softplus}(s_t + b_bias)
+g_t = -\exp(A_{\log}) \cdot \mathrm{softplus}(s_t + b_{bias})
 $$
 
 其中，softplus(x) $=\ln(1+e^{x})$

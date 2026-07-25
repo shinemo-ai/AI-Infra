@@ -45,7 +45,7 @@ $$
 \beta_t^{h} = \mathrm{Sigmoid}(W_{\beta}^{h} x_t) \in [0, 1]
 $$
 
-对应到结构图右侧：q/k 经 Linear → Conv →（Swish）→ L2 Norm；v 经 Linear → Conv → Swish；$\alpha$ / $\beta$ 等门控量由低秩 / 线性投影再经激活得到。
+对应到结构图右侧：q/k 经 Linear → Conv →（Swish）→ L2 Norm；v 经 Linear → Conv → Swish； $\alpha$ / $\beta$ 等门控量由低秩 / 线性投影再经激活得到。
 
 ## 实现要点
 

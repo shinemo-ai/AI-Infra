@@ -110,4 +110,80 @@ get_attn_backend().forward(...)          # HybridLinearAttnBackend
   └─ KDA 层 → linear_attn_backend.forward_decode / forward_extend
                     └─ 这里才是 KDAAttnBackend
 ```
+ 
+`KDAAttnBackend` 里核心的算子实现使用triton kernel，即`KDAKernelDispatcher`，当然它只是上层的封装，实际定义了`triton_kernel = TritonKDAKernel()`。如果是decode就调用`TritonKDAKernel`的decode方法，prefill就调用extend方法。
+再细看extend：
+```python
+def extend(
+        self,
+        q: torch.Tensor,
+        k: torch.Tensor,
+        v: torch.Tensor,
+        g: torch.Tensor,
+        beta: torch.Tensor,
+        *,
+        ssm_states: torch.Tensor,
+        cache_indices: torch.Tensor,
+        query_start_loc: torch.Tensor,
+        A_log: Optional[torch.Tensor] = None,
+        dt_bias: Optional[torch.Tensor] = None,
+        lower_bound: Optional[float] = None,
+        **kwargs,
+    ) -> torch.Tensor:
+        return chunk_kda(
+            q=q,
+            k=k,
+            v=v,
+            g=g,
+            beta=beta,
+            initial_state=ssm_states,
+            initial_state_indices=cache_indices,
+            use_qk_l2norm_in_kernel=True,
+            cu_seqlens=query_start_loc,
+            A_log=A_log,
+            dt_bias=dt_bias,
+            lower_bound=lower_bound,
+        )
+```
+其中`chunk_kda`来源于`python/sglang/srt/layers/attention/fla/kda.py`，即
+```python
+def chunk_kda(
+    q: torch.Tensor,
+    k: torch.Tensor,
+    v: torch.Tensor,
+    g: torch.Tensor,
+    beta: torch.Tensor,
+    scale: float = None,
+    initial_state: torch.Tensor = None,
+    initial_state_indices: torch.Tensor = None,
+    use_qk_l2norm_in_kernel: bool = False,
+    cu_seqlens: Optional[torch.LongTensor] = None,
+    A_log: Optional[torch.Tensor] = None,
+    dt_bias: Optional[torch.Tensor] = None,
+    lower_bound: Optional[float] = None,
+    **kwargs,
+):
+    if scale is None:
+        scale = k.shape[-1] ** -0.5
 
+    if use_qk_l2norm_in_kernel:
+        q = l2norm_fwd(q.contiguous())
+        k = l2norm_fwd(k.contiguous())
+
+    o = chunk_kda_fwd(
+        q=q,
+        k=k,
+        v=v.contiguous(),
+        g=g.contiguous(),
+        beta=beta.contiguous(),
+        scale=scale,
+        initial_state=initial_state,
+        initial_state_indices=initial_state_indices,
+        cu_seqlens=cu_seqlens,
+        A_log=A_log,
+        dt_bias=dt_bias,
+        lower_bound=lower_bound,
+    )
+    return o
+```
+核心是`chunk_kda_fwd`

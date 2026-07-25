@@ -1,6 +1,6 @@
 # Kimi Delta Attention (KDA)
 
-![Kimi Delta Attention 模型结构](figures/kda.png)
+Kimi Delta Attention 模型结构
 
 **Kimi Delta Attention (KDA)** 是 Kimi 系列大模型在结构上最重要的创新之一。它由 Gated Delta Attention (GDA) 演化而来，二者的核心差异在于**衰减（decay）方式**：
 
@@ -45,7 +45,7 @@ $$
 \beta_t^{h} = \mathrm{Sigmoid}(W_{\beta}^{h} x_t) \in [0, 1]
 $$
 
-对应到结构图右侧： $q$ / $k$ 经 Linear → Conv →（Swish）→ L2 Norm；v 经 Linear → Conv → Swish； $\alpha$ / $\beta$ 等门控量由低秩 / 线性投影再经激活得到。
+对应到结构图右侧： $q$ / $k$ 经 Linear → Conv → Swish → L2 Norm；v 经 Linear → Conv → Swish； $\alpha$ / $\beta$ 等门控量由低秩 / 线性投影再经激活得到。
 
 ## 实现要点
 
@@ -59,9 +59,55 @@ $$
 
 在 SGLang 中，该衰减函数有两种写法：
 
-| 写法 | 说明 |
-|------|------|
+
+| 写法           | 说明                                |
+| ------------ | --------------------------------- |
 | **standard** | Kimi 实际采用的写法，与 Mamba / GDA 经典形式一致 |
-| **safe** | 数值更稳健的变体 |
+| **safe**     | 数值更稳健的变体                          |
+
 
 当前 Kimi 使用的是 **standard** 写法。
+
+### SGLang 调用链路
+
+```text
+KimiDeltaAttention.forward
+└── self.attn(...)                              # RadixLinearAttention
+    └── get_attn_backend().forward              # HybridLinearAttnBackend
+        ├── decode → KDAAttnBackend.forward_decode
+        │   ├── causal_conv1d_update            # ShortConv
+        │   └── kernel_dispatcher.packed_decode / decode
+        │       └── TritonKDAKernel
+        │           ├── fused_recurrent_kda_packed_decode
+        │           │                               # fla/fused_recurrent.py
+        │           └── fused_sigmoid_gating_delta_rule_update
+        │                                           # fla/fused_sigmoid_gating_recurrent.py
+        │
+        └── prefill/extend → KDAAttnBackend.forward_extend
+            ├── causal_conv1d_fn                # ShortConv
+            └── kernel_dispatcher.extend
+                └── TritonKDAKernel.extend
+                    └── chunk_kda(...)          # fla/kda.py（论文 chunk 公式主入口）
+```
+
+在`RadixLinearAttention`里如果是普通eager prefill会直接进入else分支：
+
+```python
+get_attn_backend().forward(
+    layer=self,
+    forward_batch=forward_batch,
+    mixed_qkv=mixed_qkv,
+    a=a,
+    b=b,
+)
+```
+
+`get_attn_backend()` 拿到的是 `HybridLinearAttnBackend`，先调它的 `forward`，再按层分流：
+
+```text
+get_attn_backend().forward(...)          # HybridLinearAttnBackend
+  ├─ full attn 层 → full_attn_backend
+  └─ KDA 层 → linear_attn_backend.forward_decode / forward_extend
+                    └─ 这里才是 KDAAttnBackend
+```
+

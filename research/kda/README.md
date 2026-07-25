@@ -30,7 +30,7 @@ $$
 论文结构图中，KDA 各分量的计算可概括为：
 
 $$
-q_t^{h},\, k_t^{h} = \mathrm{L2Norm}\big(\mathrm{Swish}(\mathrm{ShortConv}(W_{q/k}^{h} x_t))\big) \in \mathbb{R}^{d_k}
+q_t^{h},\ k_t^{h} = \mathrm{L2Norm}\big(\mathrm{Swish}(\mathrm{ShortConv}(W_{q/k}^{h} x_t))\big) \in \mathbb{R}^{d_k}
 $$
 
 $$

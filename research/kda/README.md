@@ -209,8 +209,4 @@ else:
         chunk_indices=chunk_indices,
     )
 ```
-`if A_log is not None`是Kimi默认路径，`kda_gate_chunk_cumsum`其实就是一次kernel做完两件事情，因为这种情况下`chunk_kda_fwd`传入的 $g$ 其实就是
-
-$$
-W_{\alpha}^{\uparrow} W_{\alpha}^{\downarrow} x_t
-$$
+`if A_log is not None`是Kimi默认路径，`kda_gate_chunk_cumsum`其实就是一次kernel做完两件事情，因为这种情况下`chunk_kda_fwd`传入的 $g$ 其实就是 $W_{\alpha}^{\uparrow} W_{\alpha}^{\downarrow} x_t$

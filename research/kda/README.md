@@ -221,7 +221,7 @@ $$
 
 其中，softplus(x) $=\ln(1+e^{x})$ 。 然后调用`tl.cumsum`对 $g_t$ 做累加得到 $G_t$ ，因为在`chunk_kda_fwd_kernel_intra_token_parallel`需要使用 $G_t$ 来计算 $e^{G_t}$ 。
 
-ShortConv实际是因果1D卷积，且卷积核的大小为4（short_conv_kernel_size），步长为1，即每个位置用长度为4的窗口看当前及过去共4个token（过去3个token + 当前1个token），窗口每次向前滑1步。正是因为卷积步长为1，所以经过ShortConv后的张量维度与输入保持一致，代码里没有明确指定stride，具体可见`python/sglang/srt/layers/attention/mamba/causal_conv1d_triton.py`，在`causal_conv1d_fwd_kernel`里：
+ShortConv实际是因果1D卷积，且卷积核的大小为4（short_conv_kernel_size），步长为1，即每个位置用长度为4的窗口看当前及过去共4个token（过去3个token + 当前1个token），窗口每次向前滑1步。正是因为卷积步长为1，所以经过ShortConv后的张量维度与输入保持一致，代码里没有明确指定stride，具体可见`python/sglang/srt/layers/attention/mamba/causal_conv1d_triton.py`，在`_causal_conv1d_fwd_kernel`里：
 ```python
 for idx_token in range(segment_len):
     ...
@@ -244,3 +244,52 @@ for idx_token in range(segment_len):
 | t=3 | `[x0, x1, x2, x3]` |
 | t=4 | `[x1, x2, x3, x4]` |
 | t=5 | `[x2, x3, x4, x5]` |
+
+如果开启`radix cache`即需要前缀缓存命中，conv state需要保存下来。在开启chunk prefill时，单次forward（一个chunk）内部：ShortConv（kernel=4）的滑窗状态保留在寄存器中，每处理完一个token只滚动保留最近3个投影后的输入特征时间步（即 $\x_{t-3}$ , $\x_{t-2}$, $\x_{t-1}$ ），chunk边界再把这3个输入特征写回GPU上的`conv_state`。
+
+上述均在`_causal_conv1d_fwd_kernel`里，chunk内写回可见：
+```python
+for idx_token in range(segment_len):
+    ...
+    matrix_x = col0
+    ...
+    elif KERNEL_WIDTH == 4:
+        col0 = col1
+        col1 = col2
+        col2 = matrix_x
+```
+chunk/forward写回可见：
+```python
+# STEP 2:
+# here prepare data for updating conv_state
+if (
+    state_len <= seqlen
+):  # SMALL_CACHE=True (only move part of 'x' into conv_state cache)
+    # just read from 'x'
+    # copy 'x' data to conv_state
+    # load only 'x' data (and set 0 before 'x' if seqlen < state_len)
+    idx_tokens_last = (seqlen - state_len) + tl.arange(
+        0, NP2_STATELEN
+    )  # [BLOCK_M]
+    x_ptrs = (
+        x_ptr
+        + ((sequence_start_index + idx_tokens_last) * stride_x_token)[:, None]
+        + (idx_feats * stride_x_dim)[None, :]
+    )  # [BLOCK_M,BLOCK_N,]
+    mask_x = (
+        (idx_tokens_last >= 0)[:, None]
+        & (idx_tokens_last < seqlen)[:, None]
+        & (idx_feats < dim)[None, :]
+    )  # token-index  # token-index  # feature-index
+    loaded_x = tl.load(x_ptrs, mask_x, 0.0)
+    new_conv_state = tl.load(x_ptrs, mask_x, 0.0)
+    idx_tokens_conv = tl.arange(0, NP2_STATELEN)  # [BLOCK_M]
+    conv_states_ptrs_target = (
+        conv_states_base[None, :]
+        + (idx_tokens_conv * stride_conv_state_tok)[:, None]
+    )
+
+    mask = (idx_tokens_conv < state_len)[:, None] & (idx_feats < dim)[None, :]
+    tl.debug_barrier()  #  NOTE: use this due to bug in Triton compiler
+    tl.store(conv_states_ptrs_target, new_conv_state, mask)
+```

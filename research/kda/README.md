@@ -234,7 +234,7 @@ for idx_token in range(segment_len):
 ```
 其实就是在当前拍卷积只看col0、col1、col2和matrix，再下一拍就是上一拍的col1（t-3）、col2（t-2）、matrix（t-1），再加上下一拍的token t。
 
-对于ShortConv，如果序列长度为 $\T$ ，因果卷积就要做 $\T$ 次卷积，每个token位置一次，不够卷积核大小的话左侧pad，比如：
+对于ShortConv，如果序列长度为 $T$ ，因果卷积就要做 $T$ 次卷积，每个token位置一次，不够卷积核大小的话左侧pad，比如：
 
 | 位置 | 窗口（不足补 0） |
 |------|------------------|

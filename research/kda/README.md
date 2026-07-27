@@ -245,7 +245,7 @@ for idx_token in range(segment_len):
 | t=4 | `[x1, x2, x3, x4]` |
 | t=5 | `[x2, x3, x4, x5]` |
 
-如果开启`radix cache`即需要前缀缓存命中，conv state需要保存下来。在开启chunk prefill时，单次forward（一个chunk）内部：ShortConv（kernel=4）的滑窗状态保留在寄存器中，每处理完一个token只滚动保留最近3个投影后的输入特征时间步（即 $\x_{t-3}$ , $\x_{t-2}$, $\x_{t-1}$ ），chunk边界再把这3个输入特征写回GPU上的`conv_state`。
+如果开启`radix cache`即需要前缀缓存命中，`conv_state`需要保存下来。在开启chunk prefill时，单次forward（一个chunk）内部：ShortConv（kernel=4）的滑窗状态保留在寄存器中，每处理完一个token只滚动保留最近3个投影后的输入特征时间步（即 $\x_{t-3}$ , $\x_{t-2}$, $\x_{t-1}$ ），chunk边界再把这3个输入特征写回GPU上的`conv_state`。
 
 上述均在`_causal_conv1d_fwd_kernel`里，chunk内写回可见：
 ```python

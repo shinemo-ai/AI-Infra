@@ -221,7 +221,7 @@ $$
 
 其中，softplus(x) $=\ln(1+e^{x})$ 。 然后调用`tl.cumsum`对 $g_t$ 做累加得到 $G_t$ ，因为在`chunk_kda_fwd_kernel_intra_token_parallel`需要使用 $G_t$ 来计算 $e^{G_t}$ 。
 
-ShortConv实际是因果1D卷积，且卷积核的大小为4（short_conv_kernel_size），步长为1，即每个位置用长度为4的窗口看当前及过去共4个token，窗口每次向前滑1步。正是因为卷积步长为1，所以经过ShortConv后的张量维度与输入保持一致，代码里没有明确指定stride，具体可见`python/sglang/srt/layers/attention/mamba/causal_conv1d_triton.py`，在`causal_conv1d_fwd_kernel`里：
+ShortConv实际是因果1D卷积，且卷积核的大小为4（short_conv_kernel_size），步长为1，即每个位置用长度为4的窗口看当前及过去共4个token（过去3个token + 当前1个token），窗口每次向前滑1步。正是因为卷积步长为1，所以经过ShortConv后的张量维度与输入保持一致，代码里没有明确指定stride，具体可见`python/sglang/srt/layers/attention/mamba/causal_conv1d_triton.py`，在`causal_conv1d_fwd_kernel`里：
 ```python
 for idx_token in range(segment_len):
     ...
@@ -233,3 +233,14 @@ for idx_token in range(segment_len):
         col2 = matrix_x
 ```
 其实就是在当前拍卷积只看col0、col1、col2和matrix，再下一拍就是上一拍的col1（t-3）、col2（t-2）、matrix（t-1），再加上下一拍的token t。
+
+对于ShortConv，如果序列长度为 $\T$ ，因果卷积就要做 $\T$ 次卷积，每个token位置一次，不够卷积核大小的话左侧pad，比如：
+
+| 位置 | 窗口（不足补 0） |
+|------|------------------|
+| t=0 | `[0, 0, 0, x0]` |
+| t=1 | `[0, 0, x0, x1]` |
+| t=2 | `[0, x0, x1, x2]` |
+| t=3 | `[x0, x1, x2, x3]` |
+| t=4 | `[x1, x2, x3, x4]` |
+| t=5 | `[x2, x3, x4, x5]` |

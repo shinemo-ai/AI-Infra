@@ -2,6 +2,8 @@
 
 Kimi Delta Attention 模型结构
 
+![Kimi Delta Attention 模型结构](figures/kda.png)
+
 **Kimi Delta Attention (KDA)** 是 Kimi 系列大模型在结构上最重要的创新之一。它由 Gated Delta Attention (GDA) 演化而来，二者的核心差异在于**衰减（decay）方式**：
 
 - **GDA**：衰减因子是**标量**，所有通道共享同一个衰减系数，控制粒度较粗；

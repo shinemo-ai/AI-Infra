@@ -295,3 +295,9 @@ if (
     tl.debug_barrier()  #  NOTE: use this due to bug in Triton compiler
     tl.store(conv_states_ptrs_target, new_conv_state, mask)
 ```
+
+在KDA（线性注意力）后会跟随MLA，但对于Kimi Linear，多数层是KDA，每隔几层会插入一层MLA，Kimi Linear常见比例大约为3:1（KDA:MLA），在config里会用`kda_layers` / `full_attn_layers`来区分。机制上和DeepSeek的MLA一样（`python/sglang/srt/models/kimi_linear.py`）：
+```python
+from sglang.srt.models.deepseek_v2 import DeepseekV2AttentionMLA as KimiMLAAttention
+```
+只不过Kimi Linear把它做成了NoPE MLA，即关掉了RoPE。

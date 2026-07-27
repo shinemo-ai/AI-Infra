@@ -301,4 +301,4 @@ if (
 from sglang.srt.models.deepseek_v2 import DeepseekV2AttentionMLA as KimiMLAAttention
 ```
 只不过Kimi Linear把它做成了NoPE MLA，即关掉了RoPE。
-如果要完全支持Kimi Linear的radix cache，则通常需要保存三部分，即KDA `conv_state`、KDA $S_{t}$和MLA KV Cache。
+Kimi Linear的radix cache，则通常需要保存三部分，即KDA `conv_state`、KDA $S_{t}$和MLA KV Cache。

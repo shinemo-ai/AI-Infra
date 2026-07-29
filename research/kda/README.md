@@ -334,7 +334,7 @@ $$
 
 - mamba-radix-cache-strategy
 
-`--mamba-radix-cache-strategy`决定Mamba state怎么跟radix cache配合调度———要不要ping-pong exra buffer、能不能overlap、能不能用大`page_size`、每个请求占几个state槽。
+`--mamba-radix-cache-strategy`决定Mamba state怎么跟radix cache配合调度———要不要ping-pong extra buffer、能不能overlap、能不能用大`page_size`、每个请求占几个state槽。
 
 `CLI`可选：`auto`/`no_buffer`/`extra_buffer`/`extra_buffer_lazy`，默认`auto`
 

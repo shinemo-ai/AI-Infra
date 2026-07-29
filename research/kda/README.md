@@ -341,3 +341,31 @@ $$
 Full attention的KV是按token追加的，Mamba/GDA的state是固定大小的递推状态。做prefix sharing时：
 1. 公共前缀的KV可以挂在radix树上复用
 2. 分叉点还需要一份当时的Mamba state快照，否则从中间恢复会错
+
+四种取值：
+1. auto（默认）
+启动时根据模型与其它参数自动解析：
+若开启`overlap`（未 `disable_overlap_schedule`）或 `page_size` > 1，且架构支持 `extra_buffer` → 选 `extra_buffer`；
+否则 → 选 `no_buffer`，并强制 `disable_overlap_schedule=True`。
+
+2. no_buffer（V1，省显存）
+不开ping-pong extra buffer；
+不能overlap schedule；
+`page_size`只能是1（或未设）；
+不支持`trtllm_mha`attention backend；
+每个请求的state槽相对少，并发上限更高、吞吐/前缀复用能力较弱；
+适合：显存紧、不需要大 page、可接受关 overlap。
+
+3. extra_buffer（V2，吞吐向）
+开ping-pong/track buffer，decode过程中可周期性snapshot Mamba state；
+支持overlap scheduling；
+支持`page_size=64`等；
+支持branching point caching（分叉点状态复用）；
+代价：每请求占更多mamba slot → 同样max_mamba_cache_size（Mamba池能开的槽位数，即slot个数）下并发更少。
+
+4. extra_buffer_lazy
+`extra_buffer`的省槽变体（lazy分配track slot）。
+限制更严，例如：
+PD disaggregation不支持（decode pool未接lazy）
+与部分speculative（如 DFLASH）不兼容；
+`DSPARK`有单独路径

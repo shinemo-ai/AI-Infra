@@ -302,3 +302,32 @@ from sglang.srt.models.deepseek_v2 import DeepseekV2AttentionMLA as KimiMLAAtten
 ```
 只不过Kimi Linear把它做成了NoPE MLA，即关掉了RoPE。
 Kimi Linear的radix cache，则通常需要保存三部分，即KDA `conv_state`、KDA $S_{t}$和MLA KV Cache。
+
+## 参数说明
+
+- mamba-full-memory-ratio
+
+在hybrid模型（同一套网络里既有full attention，又有Mamba/GDA/KDA等线性注意力）里，GPU上需要同时保存两类可拓展缓存：
+1. Full-attention KV Cache：按token增长，决定“能缓存多长上下文/多少token”
+2. Mamba（linear-attn）state cache：按请求槽（slot）增长，决定“能同时跑多少路请求”
+
+`--mamba-full-memory-ratio`就是在模型权重等已经占完之后的剩余显存上，规定这两类缓存的相对比例。
+官方help原文：
+
+> The ratio of mamba state memory to full kv cache memory.
+
+设该参数为 $r$ ，则：
+
+$$
+\frac{M_{mamba}}{M_{KV}} = r
+$$
+
+其中，
+
+$$
+M_{mamba} = \text{total\_rest\_memory} \cdot \frac{r}{1+r}
+$$
+
+$$
+M_{KV} = \text{total\_rest\_memory} \cdot \frac{1}{1+r}
+$$

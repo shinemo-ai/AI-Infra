@@ -325,9 +325,9 @@ $$
 其中，
 
 $$
-M_{mamba} = \text{total\_rest\_memory} \cdot \frac{r}{1+r}
+M_{mamba} = {total\\_rest\\_memory} \cdot \frac{r}{1+r}
 $$
 
 $$
-M_{KV} = \text{total\_rest\_memory} \cdot \frac{1}{1+r}
+M_{KV} = {total\\_rest\\_memory} \cdot \frac{1}{1+r}
 $$

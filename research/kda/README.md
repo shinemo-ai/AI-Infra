@@ -331,3 +331,13 @@ $$
 $$
 M_{KV} = {total\\_rest\\_memory} \cdot \frac{1}{1+r}
 $$
+
+- mamba-radix-cache-strategy
+
+`--mamba-radix-cache-strategy`决定Mamba state怎么跟radix cache配合调度———要不要ping-pong exra buffer、能不能overlap、能不能用大`page_size`、每个请求占几个state槽。
+
+`CLI`可选：`auto`/`no_buffer`/`extra_buffer`/`extra_buffer_lazy`，默认`auto`
+
+Full attention的KV是按token追加的，Mamba/GDA的state是固定大小的递推状态。做prefix sharing时：
+1. 公共前缀的KV可以挂在radix树上复用
+2. 分叉点还需要一份当时的Mamba state快照，否则从中间恢复会错
